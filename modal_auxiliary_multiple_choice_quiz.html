@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>助動詞 4択問題ゲーム</title>
+  <style>
+    :root{
+      --bg:#f6f8fb; --card:#fff; --ink:#172033; --muted:#687386;
+      --main:#2f6fed; --soft:#eaf1ff; --ok:#10a36f; --ng:#e5484d;
+      --line:#dce3ef; --yellow:#fff8e7;
+    }
+    *{box-sizing:border-box}
+    body{margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Hiragino Sans","Yu Gothic",sans-serif; background:var(--bg); color:var(--ink);}
+    header{text-align:center; padding:24px 14px 12px;}
+    h1{margin:0 0 8px; font-size:clamp(26px,4.8vw,42px);}
+    .sub{color:var(--muted); font-size:15px; line-height:1.6}
+    main{max-width:980px; margin:0 auto; padding:0 14px 30px;}
+    .panel{background:var(--card); border:1px solid var(--line); border-radius:24px; box-shadow:0 12px 28px rgba(26,42,68,.08); padding:18px;}
+    .toprow{display:flex; gap:10px; align-items:center; justify-content:space-between; flex-wrap:wrap; margin-bottom:14px;}
+    .badge{background:var(--soft); color:var(--main); font-weight:900; padding:8px 12px; border-radius:999px;}
+    .score{font-weight:900; color:var(--muted);}
+    .progressWrap{height:12px; background:#edf1f7; border-radius:999px; overflow:hidden; flex:1; min-width:180px;}
+    .progress{height:100%; width:0%; background:var(--main); transition:.25s;}
+    .questionBox{border:2px solid var(--line); border-radius:20px; padding:18px; background:linear-gradient(180deg,#fff,#fbfdff);}
+    .type{font-size:14px; font-weight:900; color:var(--main); margin-bottom:10px;}
+    .q{font-family:Georgia,"Times New Roman",serif; font-size:clamp(24px,3.8vw,42px); line-height:1.35; font-weight:800; margin-bottom:16px;}
+    .choices{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
+    .choice{border:2px solid var(--line); background:white; border-radius:16px; padding:15px; font-size:clamp(17px,2.5vw,24px); font-weight:800; text-align:left; cursor:pointer; transition:.15s;}
+    .choice:hover{border-color:var(--main); background:var(--soft);}
+    .choice.correct{border-color:var(--ok); background:#e9fbf4; color:#087a50;}
+    .choice.wrong{border-color:var(--ng); background:#fff0f0; color:#b42329;}
+    .choice:disabled{cursor:default; opacity:1;}
+    .result{margin-top:14px; display:none; border-radius:16px; padding:14px; line-height:1.65;}
+    .result.ok{display:block; background:#e9fbf4; border:1px solid #a8ecd2;}
+    .result.ng{display:block; background:#fff0f0; border:1px solid #ffc9c9;}
+    .ja{margin-top:10px; background:var(--yellow); border:1px solid #f1dfac; border-radius:12px; padding:10px;}
+    .buttons{display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-top:14px;}
+    button{font-size:16px; border:none; border-radius:14px; padding:13px 12px; font-weight:900; cursor:pointer; background:#eef3fb; color:var(--ink);}
+    button.primary{background:var(--main); color:white;}
+    button.green{background:var(--ok); color:white;}
+    button.red{background:var(--ng); color:white;}
+    button:active{transform:translateY(1px)}
+    .list{margin-top:18px; display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:8px;}
+    .item{border:1px solid var(--line); border-radius:12px; background:white; padding:10px; cursor:pointer; font-size:14px; line-height:1.35;}
+    .item.active{border-color:var(--main); background:var(--soft);}
+    .item.ok{border-color:#a8ecd2; background:#f0fff8;}
+    .item.ng{border-color:#ffc9c9; background:#fff7f7;}
+    .small{font-size:13px; color:var(--muted); margin-top:10px; line-height:1.6;}
+    @media(max-width:680px){
+      .choices{grid-template-columns:1fr;}
+      .buttons{grid-template-columns:repeat(2,1fr);}
+    }
+  </style>
+</head>
+<body>
+<header>
+  <h1>助動詞 4択問題ゲーム</h1>
+  <div class="sub">何度も解き直しOK・間違えた問題だけ復習できます</div>
+</header>
+<main>
+  <section class="panel">
+    <div class="toprow">
+      <div class="badge" id="counter">1 / 39</div>
+      <div class="progressWrap"><div class="progress" id="progress"></div></div>
+      <div class="score" id="score">正解 0 / 0</div>
+    </div>
+
+    <div class="questionBox">
+      <div class="type" id="type"></div>
+      <div class="q" id="q"></div>
+      <div class="choices" id="choices"></div>
+      <div class="result" id="result"></div>
+    </div>
+
+    <div class="buttons">
+      <button id="prevBtn">← 前へ</button>
+      <button class="primary" id="nextBtn">次へ →</button>
+      <button class="green" id="reviewBtn">間違い復習</button>
+      <button class="red" id="resetBtn">最初から</button>
+    </div>
+    <div class="buttons">
+      <button id="shuffleBtn">ランダム</button>
+      <button id="normalBtn">番号順</button>
+      <button id="showAnswerBtn">答えを見る</button>
+      <button id="retryBtn">この問題を解き直す</button>
+    </div>
+    <div class="small">答えを選ぶと、自動で正誤と解説が出ます。リストから好きな問題に移動できます。</div>
+  </section>
+  <div class="list" id="list"></div>
+</main>
+
+<script>
+const questions = [{"type": "例題 020", "q": "Jane ( ____ ) run the marathon today because she has a sprained ankle.", "choices": ["can't", "may", "must", "will"], "answer": "can't", "ja": "ジェーンは足首をねんざしているので、今日はマラソンを走れません。", "ex": "けがをしているので「走れない」→ can't。"}, {"type": "例題 021", "q": "When I saw his performance on TV, I decided that I ( ____ ) be a dancer.", "choices": ["will", "would", "may", "might"], "answer": "would", "ja": "テレビで彼の演技を見たとき、私はダンサーになろうと決心しました。", "ex": "decided が過去なので、後ろは時制の一致で would。"}, {"type": "例題 022", "q": "As my mother was sick in bed, I ( ____ ) prepare dinner for my family yesterday.", "choices": ["must", "have to", "must have", "had to"], "answer": "had to", "ja": "母が病気で寝ていたので、私は昨日、家族のために夕食を作らなければなりませんでした。", "ex": "yesterday がある過去の必要なので had to。"}, {"type": "例題 023", "q": "You've been very busy for six months. You ( ____ ) take a few days off.", "choices": ["need", "should", "ought", "would"], "answer": "should", "ja": "あなたは6か月もとても忙しかったのですね。数日休んだほうがいいですよ。", "ex": "助言を表す should。「ought」は普通 ought to の形です。"}, {"type": "例題 024", "q": "Choose the correct sentence.", "choices": ["You had better not buy such a thing.", "You not had better buy such a thing.", "You had better buy not such a thing.", "You better had not buy such a thing."], "answer": "You had better not buy such a thing.", "ja": "そんなものは買わないほうがよい。", "ex": "had better not + 動詞の原形 で「～しないほうがよい」。"}, {"type": "例題 025", "q": "Since Jimmy can solve the difficult problem, he ( ____ ) be a genius.", "choices": ["cannot", "must", "ought", "shall"], "answer": "must", "ja": "ジミーはその難しい問題を解けるのだから、天才に違いありません。", "ex": "強い推量「～に違いない」→ must。"}, {"type": "例題 026", "q": "There ( ____ ) an old cherry tree in front of the school.", "choices": ["would be", "was used", "used to be", "was used to be"], "answer": "used to be", "ja": "学校の前には昔、古い桜の木がありました。", "ex": "used to be で「以前は～だった」。"}, {"type": "例題 027", "q": "Taro got a perfect score on the math test. He ( ____ ) very hard.", "choices": ["must study", "could study", "must have studied", "can't have studied"], "answer": "must have studied", "ja": "太郎は数学のテストで満点を取りました。とても一生懸命勉強したに違いありません。", "ex": "過去の出来事への強い推量は must have + 過去分詞。"}, {"type": "例題 028", "q": "The festival last night was really fun. You ( ____ ) come.", "choices": ["must", "must have", "should have", "should not have"], "answer": "should have", "ja": "昨夜のお祭りは本当に楽しかったよ。あなたも来ればよかったのに。", "ex": "should have + 過去分詞 で「～すればよかったのに」。"}, {"type": "例題 029", "q": "It is necessary that you ( ____ ) have a physical examination.", "choices": ["would", "could", "might", "should"], "answer": "should", "ja": "あなたが健康診断を受けることは必要です。", "ex": "It is necessary that S (should) 動詞原形 の形。ここでは should。"}, {"type": "例題 030", "q": "I ( ____ ) stay home than go out tonight.", "choices": ["would rather", "would have rather", "should rather", "will rather"], "answer": "would rather", "ja": "今夜は外出するより家にいたいです。", "ex": "would rather A than B で「BするよりAしたい」。"}, {"type": "問題 1", "q": "You ( ____ ) wait in my office, if you like.", "choices": ["would", "must", "will", "can"], "answer": "can", "ja": "よければ、私のオフィスで待っていてもいいですよ。", "ex": "許可「～してもよい」→ can。"}, {"type": "問題 2", "q": "Don't throw the textbook away. You ( ____ ) need it later.", "choices": ["can", "might", "must be", "should be"], "answer": "might", "ja": "その教科書を捨ててはいけません。あとで必要になるかもしれません。", "ex": "可能性「～かもしれない」→ might。"}, {"type": "問題 3", "q": "She ( ____ ) not give up smoking, although I asked her many times.", "choices": ["must", "need", "should", "would"], "answer": "would", "ja": "私が何度も頼んだのに、彼女はたばこをやめようとしませんでした。", "ex": "would not + 動詞 で「どうしても～しようとしない」。"}, {"type": "問題 4", "q": "The train was delayed yesterday, so she ( ____ ) take a taxi.", "choices": ["had to", "has to", "have to", "must"], "answer": "had to", "ja": "昨日、電車が遅れたので、彼女はタクシーに乗らなければなりませんでした。", "ex": "過去の必要なので had to。"}, {"type": "問題 5", "q": "You ( ____ ) to leave before it gets dark.", "choices": ["should", "ought", "must", "used"], "answer": "ought", "ja": "暗くなる前に出発したほうがよいですよ。", "ex": "ought to + 動詞の原形。「to leave」につながるので答えは ought。"}, {"type": "問題 6", "q": "You ( ____ ) trust that man. He is a terrible liar.", "choices": ["had better not", "had not better", "have better not", "have not better to"], "answer": "had better not", "ja": "あの男を信用しないほうがいいです。彼はひどいうそつきです。", "ex": "had better not + 動詞の原形。"}, {"type": "問題 7", "q": "Karen ( ____ ) be tired since she has been terribly busy recently.", "choices": ["can't", "ought", "must", "will"], "answer": "must", "ja": "カレンは最近とても忙しかったのだから、きっと疲れているでしょう。", "ex": "強い推量「きっと～だ」→ must。"}, {"type": "問題 8", "q": "He has just had a big lunch. He ( ____ ) be hungry.", "choices": ["can", "cannot", "must", "must not"], "answer": "cannot", "ja": "彼はたった今たくさん昼食を食べたところです。お腹がすいているはずがありません。", "ex": "強い否定の推量「～のはずがない」→ cannot / can't。"}, {"type": "問題 9", "q": "They ( ____ ) to be good friends, but unfortunately, not anymore.", "choices": ["are used", "use", "get used", "used"], "answer": "used", "ja": "彼らは以前は仲のよい友達でしたが、残念ながら今はもう違います。", "ex": "used to be で「以前は～だった」。"}, {"type": "問題 10", "q": "I ( ____ ) take the bus to my office, but now I walk.", "choices": ["don't have to", "must not", "used to", "should"], "answer": "used to", "ja": "以前は会社までバスに乗っていましたが、今は歩いています。", "ex": "used to + 動詞の原形 で「以前は～したものだ」。"}, {"type": "問題 11", "q": "When I was a child, I ( ____ ) look up at the clouds for hours.", "choices": ["should", "will", "would", "can"], "answer": "would", "ja": "子どものころ、私は何時間も雲を見上げていたものでした。", "ex": "過去の習慣を表す would。"}, {"type": "問題 12", "q": "I've lost my cellphone. I ( ____ ) it somewhere.", "choices": ["must leave", "must left", "must have left", "must had left"], "answer": "must have left", "ja": "携帯電話をなくしてしまいました。どこかに置いてきたに違いありません。", "ex": "過去の出来事への推量は must have + 過去分詞。"}, {"type": "問題 13", "q": "You ( ____ ) Helen in London this morning. She has been in New York for a week.", "choices": ["can't have seen", "must have seen", "needn't have seen", "should have seen"], "answer": "can't have seen", "ja": "あなたが今朝ロンドンでヘレンに会ったはずがありません。彼女は1週間ずっとニューヨークにいるのですから。", "ex": "過去の出来事の否定の推量「～したはずがない」→ can't have + 過去分詞。"}, {"type": "問題 14", "q": "Robert ( ____ ) at the concert last night, but we didn't see him there.", "choices": ["must be", "ought to be", "might have been", "should not be"], "answer": "might have been", "ja": "ロバートは昨夜コンサートにいたかもしれませんが、私たちはそこで彼を見ませんでした。", "ex": "過去の可能性「～だったかもしれない」→ might have been。"}, {"type": "問題 15", "q": "I ( ____ ) given you a call this morning, but I was too busy.", "choices": ["must have", "must not have", "should have", "should not have"], "answer": "should have", "ja": "今朝あなたに電話すべきだったのですが、とても忙しすぎました。", "ex": "should have + 過去分詞 で「～すべきだったのに」。"}, {"type": "問題 16", "q": "You ( ____ ) told anybody about it. You knew it was our secret.", "choices": ["had", "should", "should have", "shouldn't have"], "answer": "shouldn't have", "ja": "それを誰にも話すべきではありませんでした。それが私たちの秘密だと知っていたのですから。", "ex": "shouldn't have + 過去分詞 で「～すべきではなかったのに」。"}, {"type": "問題 17", "q": "It is essential that every surgeon ( ____ ) a chance to receive the best possible training.", "choices": ["to have", "have", "having", "had"], "answer": "have", "ja": "どの外科医にも、できる限り最善の訓練を受ける機会があることが不可欠です。", "ex": "It is essential that S + 動詞原形。that節の中は have。"}, {"type": "問題 18", "q": "I would ( ____ ) walk two kilometers than wait an hour for the bus.", "choices": ["frequently", "never", "only", "rather"], "answer": "rather", "ja": "バスを1時間待つより、2キロ歩くほうがいいです。", "ex": "would rather A than B。"}, {"type": "問題 19", "q": "A: It is still 10 o’clock. We can go to another party!  B: Sue and I would ( ____ ) stay up late tonight because we are going to the beach tomorrow.", "choices": ["rather not", "not rather", "not rather to", "rather not to"], "answer": "rather not", "ja": "A: まだ10時だよ。もう一つ別のパーティーに行けるよ！ B: でも、スーと私は明日海へ行くので、今夜はむしろ遅くまで起きていたくありません。", "ex": "would rather not + 動詞の原形。"}, {"type": "問題 20", "q": "I cannot ( ____ ) to buy a new car after buying a house.", "choices": ["admit", "deserve", "tend", "afford"], "answer": "afford", "ja": "家を買ったあとでは、新しい車を買う余裕はありません。", "ex": "cannot afford to do で「～する余裕がない」。"}, {"type": "問題 21", "q": "She tried to be serious, but she couldn't ( ____ ).", "choices": ["keep laugh", "help laughing", "but laughing", "be laughed"], "answer": "help laughing", "ja": "彼女はまじめでいようとしましたが、笑わずにはいられませんでした。", "ex": "can't / couldn't help -ing で「～せずにはいられない」。"}, {"type": "問題 22", "q": "You ( ____ ) be too careful when driving a car.", "choices": ["haven't", "hadn't", "didn't", "can't"], "answer": "can't", "ja": "車を運転するときは、いくら注意してもしすぎることはありません。", "ex": "can't be too ... で「いくら…してもしすぎることはない」。"}, {"type": "問題 23", "q": "You may ( ____ ) get angry with Tom. He often breaks his promises.", "choices": ["good", "well", "like", "better"], "answer": "well", "ja": "トムはよく約束を破るので、あなたが彼に腹を立てるのももっともです。", "ex": "may well + 動詞 で「～するのももっともだ／たぶん～だろう」。"}, {"type": "問題 24", "q": "You ( ____ ) throw away your money as spend it gambling.", "choices": ["might well", "might as well", "might be well", "might well as"], "answer": "might as well", "ja": "ギャンブルに金を使うくらいなら、お金を捨ててしまうのと同じです。", "ex": "might as well A as B で「BするくらいならAするほうがましだ」。"}, {"type": "問題 25", "q": "Daniel will never listen! You might ( ____ ) well be talking to a brick wall.", "choices": ["if", "as", "too", "so"], "answer": "as", "ja": "ダニエルは絶対に聞かないよ！まるで壁に向かって話しているようなものだよ。", "ex": "might as well ... で慣用表現。ここでは as が入る。"}, {"type": "Writing 1", "q": "Choose the correct sentence.", "choices": ["You had better not eat so many sugary snacks.", "You had better not eat sugary so many snacks.", "You better had not eat so many sugary snacks.", "You had better eat not so many sugary snacks."], "answer": "You had better not eat so many sugary snacks.", "ja": "そんなにたくさんの糖分の多いお菓子を食べないほうがいいですよ。", "ex": "had better not + 動詞の原形。so many sugary snacks の語順にします。"}, {"type": "Writing 2", "q": "Choose the correct sentence.", "choices": ["I must have dropped it at the restaurant.", "I have must dropped it at the restaurant.", "I must dropped it at the restaurant.", "I must have it dropped at the restaurant."], "answer": "I must have dropped it at the restaurant.", "ja": "鍵が見つかりません。私はそれをレストランに落としてきたに違いありません。", "ex": "must have + 過去分詞 で過去の推量。"}, {"type": "Writing 3", "q": "Choose the correct sentence.", "choices": ["You should have checked it more carefully.", "You should checked it more carefully have.", "You have should checked it more carefully.", "You should have more carefully checked."], "answer": "You should have checked it more carefully.", "ja": "この手紙はスペルミスだらけです。もっと注意してそれを確認すべきでした。", "ex": "should have + 過去分詞。more carefully は checked を修飾します。"}];
+let order = questions.map((_,i)=>i);
+let pos = 0;
+let answered = new Map();
+let wrongSet = new Set();
+
+const $ = id => document.getElementById(id);
+function currentIndex(){ return order[pos]; }
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+}
+function updateScore(){
+  let correct = 0;
+  answered.forEach((choice, idx)=>{ if(choice === questions[idx].answer) correct++; });
+  $('score').textContent = `正解 ${correct} / ${answered.size}`;
+}
+function render(){
+  if(order.length === 0){
+    $('counter').textContent = '0 / 0';
+    $('progress').style.width = '0%';
+    $('type').textContent = '復習する問題はありません';
+    $('q').textContent = '全問正解です！';
+    $('choices').innerHTML = '';
+    $('result').className = 'result ok';
+    $('result').innerHTML = 'すばらしいです。もう一度やるときは「最初から」を押してください。';
+    buildList(); updateScore(); return;
+  }
+  const idx = currentIndex();
+  const item = questions[idx];
+  $('counter').textContent = `${pos+1} / ${order.length}`;
+  $('progress').style.width = `${((pos+1)/order.length)*100}%`;
+  $('type').textContent = item.type;
+  $('q').textContent = item.q;
+  $('choices').innerHTML = '';
+  const selected = answered.get(idx);
+
+  item.choices.forEach((choice, i)=>{
+    const btn = document.createElement('button');
+    btn.className = 'choice';
+    btn.innerHTML = `${i+1}. ${escapeHtml(choice)}`;
+    btn.onclick = () => choose(choice);
+    if(selected){
+      btn.disabled = true;
+      if(choice === item.answer) btn.classList.add('correct');
+      if(choice === selected && choice !== item.answer) btn.classList.add('wrong');
+    }
+    $('choices').appendChild(btn);
+  });
+
+  if(selected) showResult(selected === item.answer);
+  else {
+    $('result').style.display = 'none';
+    $('result').className = 'result';
+    $('result').innerHTML = '';
+  }
+  buildList(); updateScore();
+}
+function choose(choice){
+  const idx = currentIndex();
+  answered.set(idx, choice);
+  if(choice === questions[idx].answer) wrongSet.delete(idx);
+  else wrongSet.add(idx);
+  render();
+}
+function showResult(isCorrect){
+  const item = questions[currentIndex()];
+  $('result').style.display = 'block';
+  $('result').className = 'result ' + (isCorrect ? 'ok' : 'ng');
+  $('result').innerHTML = `
+    <b>${isCorrect ? '正解！' : 'もう一度確認！'}</b><br>
+    正しい答え：<b>${escapeHtml(item.answer)}</b><br>
+    <div class="ja">${escapeHtml(item.ja)}</div>
+    <div>${escapeHtml(item.ex)}</div>
+  `;
+}
+function buildList(){
+  const list = $('list'); list.innerHTML = '';
+  order.forEach((idx,k)=>{
+    const selected = answered.get(idx);
+    const div = document.createElement('div');
+    div.className = 'item' + (k===pos ? ' active' : '') + (selected ? (selected===questions[idx].answer ? ' ok' : ' ng') : '');
+    div.innerHTML = `${questions[idx].type}：${escapeHtml(questions[idx].q)}`;
+    div.onclick = () => { pos = k; render(); window.scrollTo({top:0, behavior:'smooth'}); };
+    list.appendChild(div);
+  });
+}
+function shuffleOrder(){
+  for(let i=order.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [order[i],order[j]]=[order[j],order[i]]; }
+  pos = 0; render();
+}
+$('prevBtn').onclick = () => { if(order.length){ pos = (pos - 1 + order.length) % order.length; render(); } };
+$('nextBtn').onclick = () => { if(order.length){ pos = (pos + 1) % order.length; render(); } };
+$('shuffleBtn').onclick = () => { order = questions.map((_,i)=>i); shuffleOrder(); };
+$('normalBtn').onclick = () => { order = questions.map((_,i)=>i); pos=0; render(); };
+$('resetBtn').onclick = () => { answered.clear(); wrongSet.clear(); order=questions.map((_,i)=>i); pos=0; render(); };
+$('retryBtn').onclick = () => { answered.delete(currentIndex()); render(); };
+$('showAnswerBtn').onclick = () => { answered.set(currentIndex(), questions[currentIndex()].answer); wrongSet.delete(currentIndex()); render(); };
+$('reviewBtn').onclick = () => { order = [...wrongSet]; pos = 0; render(); };
+document.addEventListener('keydown', e=>{
+  if(e.key === 'ArrowRight') $('nextBtn').click();
+  if(e.key === 'ArrowLeft') $('prevBtn').click();
+  if(['1','2','3','4'].includes(e.key) && order.length){
+    const item = questions[currentIndex()];
+    const ch = item.choices[Number(e.key)-1];
+    if(ch && !answered.has(currentIndex())) choose(ch);
+  }
+});
+render();
+</script>
+</body>
+</html>

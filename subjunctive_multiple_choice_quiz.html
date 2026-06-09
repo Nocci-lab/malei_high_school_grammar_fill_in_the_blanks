@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>仮定法 4択問題ゲーム</title>
+  <style>
+    :root{
+      --bg:#f6f8fb; --card:#fff; --ink:#172033; --muted:#687386;
+      --main:#2f6fed; --soft:#eaf1ff; --ok:#10a36f; --ng:#e5484d;
+      --line:#dce3ef; --yellow:#fff8e7;
+    }
+    *{box-sizing:border-box}
+    body{margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Hiragino Sans","Yu Gothic",sans-serif; background:var(--bg); color:var(--ink);}
+    header{text-align:center; padding:24px 14px 12px;}
+    h1{margin:0 0 8px; font-size:clamp(26px,4.8vw,42px);}
+    .sub{color:var(--muted); font-size:15px; line-height:1.6}
+    main{max-width:980px; margin:0 auto; padding:0 14px 30px;}
+    .panel{background:var(--card); border:1px solid var(--line); border-radius:24px; box-shadow:0 12px 28px rgba(26,42,68,.08); padding:18px;}
+    .toprow{display:flex; gap:10px; align-items:center; justify-content:space-between; flex-wrap:wrap; margin-bottom:14px;}
+    .badge{background:var(--soft); color:var(--main); font-weight:900; padding:8px 12px; border-radius:999px;}
+    .score{font-weight:900; color:var(--muted);}
+    .progressWrap{height:12px; background:#edf1f7; border-radius:999px; overflow:hidden; flex:1; min-width:180px;}
+    .progress{height:100%; width:0%; background:var(--main); transition:.25s;}
+    .questionBox{border:2px solid var(--line); border-radius:20px; padding:18px; background:linear-gradient(180deg,#fff,#fbfdff);}
+    .type{font-size:14px; font-weight:900; color:var(--main); margin-bottom:10px;}
+    .q{font-family:Georgia,"Times New Roman",serif; font-size:clamp(24px,3.8vw,42px); line-height:1.35; font-weight:800; margin-bottom:16px;}
+    .choices{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
+    .choice{border:2px solid var(--line); background:white; border-radius:16px; padding:15px; font-size:clamp(17px,2.5vw,24px); font-weight:800; text-align:left; cursor:pointer; transition:.15s;}
+    .choice:hover{border-color:var(--main); background:var(--soft);}
+    .choice.correct{border-color:var(--ok); background:#e9fbf4; color:#087a50;}
+    .choice.wrong{border-color:var(--ng); background:#fff0f0; color:#b42329;}
+    .choice:disabled{cursor:default; opacity:1;}
+    .result{margin-top:14px; display:none; border-radius:16px; padding:14px; line-height:1.65;}
+    .result.ok{display:block; background:#e9fbf4; border:1px solid #a8ecd2;}
+    .result.ng{display:block; background:#fff0f0; border:1px solid #ffc9c9;}
+    .ja{margin-top:10px; background:var(--yellow); border:1px solid #f1dfac; border-radius:12px; padding:10px;}
+    .buttons{display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-top:14px;}
+    button{font-size:16px; border:none; border-radius:14px; padding:13px 12px; font-weight:900; cursor:pointer; background:#eef3fb; color:var(--ink);}
+    button.primary{background:var(--main); color:white;}
+    button.green{background:var(--ok); color:white;}
+    button.red{background:var(--ng); color:white;}
+    button:active{transform:translateY(1px)}
+    .list{margin-top:18px; display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:8px;}
+    .item{border:1px solid var(--line); border-radius:12px; background:white; padding:10px; cursor:pointer; font-size:14px; line-height:1.35;}
+    .item.active{border-color:var(--main); background:var(--soft);}
+    .item.ok{border-color:#a8ecd2; background:#f0fff8;}
+    .item.ng{border-color:#ffc9c9; background:#fff7f7;}
+    .small{font-size:13px; color:var(--muted); margin-top:10px; line-height:1.6;}
+    @media(max-width:680px){
+      .choices{grid-template-columns:1fr;}
+      .buttons{grid-template-columns:repeat(2,1fr);}
+    }
+  </style>
+</head>
+<body>
+<header>
+  <h1>仮定法 4択問題ゲーム</h1>
+  <div class="sub">何度も解き直しOK・間違えた問題だけ復習できます</div>
+</header>
+<main>
+  <section class="panel">
+    <div class="toprow">
+      <div class="badge" id="counter">1 / 36</div>
+      <div class="progressWrap"><div class="progress" id="progress"></div></div>
+      <div class="score" id="score">正解 0 / 0</div>
+    </div>
+
+    <div class="questionBox">
+      <div class="type" id="type"></div>
+      <div class="q" id="q"></div>
+      <div class="choices" id="choices"></div>
+      <div class="result" id="result"></div>
+    </div>
+
+    <div class="buttons">
+      <button id="prevBtn">← 前へ</button>
+      <button class="primary" id="nextBtn">次へ →</button>
+      <button class="green" id="reviewBtn">間違い復習</button>
+      <button class="red" id="resetBtn">最初から</button>
+    </div>
+    <div class="buttons">
+      <button id="shuffleBtn">ランダム</button>
+      <button id="normalBtn">番号順</button>
+      <button id="showAnswerBtn">答えを見る</button>
+      <button id="retryBtn">この問題を解き直す</button>
+    </div>
+    <div class="small">答えを選ぶと、自動で正誤と解説が出ます。リストから好きな問題に移動できます。</div>
+  </section>
+  <div class="list" id="list"></div>
+</main>
+
+<script>
+const questions = [{"type": "例題 031", "q": "If today ( ____ ) the last day of your life, what would you want to do?", "choices": ["is", "will be", "would be", "were"], "answer": "were", "ja": "もし今日があなたの人生最後の日なら、あなたは何をしたいですか。", "ex": "現在の事実と違う仮定なので、If + 主語 + were。"}, {"type": "例題 032", "q": "If we ( ____ ) the ten o'clock train, we would have been in time.", "choices": ["catch", "caught", "have caught", "had caught"], "answer": "had caught", "ja": "もし私たちが10時の電車に乗っていたら、間に合っていただろう。", "ex": "過去の事実と違う仮定なので If + had + 過去分詞。"}, {"type": "例題 033", "q": "If you had read the notice more carefully, you ( ____ ) in trouble now.", "choices": ["are", "weren't", "wouldn't be", "would have been"], "answer": "wouldn't be", "ja": "もしあなたがその掲示をもっと注意深く読んでいたら、今困ったことにはなっていないだろう。", "ex": "過去の仮定が現在に影響している形です。主節は would be。"}, {"type": "例題 034", "q": "If Jeff ( ____ ) lose his smartphone, he would start to panic.", "choices": ["were to", "would be to", "had been to", "be to"], "answer": "were to", "ja": "もしジェフがスマートフォンをなくすようなことがあれば、彼はパニックになり始めるだろう。", "ex": "If S were to do で「もし～するようなことがあれば」。"}, {"type": "例題 035", "q": "Choose the correct sentence.", "choices": ["If it had not been for the traffic jam, I would have caught the flight to Osaka.", "If it not had been for the traffic jam, I would have caught the flight to Osaka.", "If had it not been for the traffic jam, I would have caught the flight to Osaka.", "If it had been not for the traffic jam, I would have caught the flight to Osaka."], "answer": "If it had not been for the traffic jam, I would have caught the flight to Osaka.", "ja": "交通渋滞がなかったら、私は大阪行きの飛行機に乗れていたのに。", "ex": "If it had not been for ～ で「もし～がなかったら」。"}, {"type": "例題 036", "q": "( ____ ) your assistance, our project would have failed.", "choices": ["But", "Except", "Instead", "Without"], "answer": "Without", "ja": "あなたの援助がなかったら、私たちのプロジェクトは失敗していただろう。", "ex": "Without ～ は「もし～がなければ」という仮定を表せます。"}, {"type": "例題 037", "q": "Choose the correct sentence.", "choices": ["Had I known his situation, I wouldn't have suggested the plan.", "Had known I his situation, I wouldn't have suggested the plan.", "Had I his situation known, I wouldn't have suggested the plan.", "Had his situation I known, I wouldn't have suggested the plan."], "answer": "Had I known his situation, I wouldn't have suggested the plan.", "ja": "もし私が彼の状況を知っていたら、その計画は提案しなかっただろう。", "ex": "If を省略すると Had + 主語 + 過去分詞 の倒置になります。"}, {"type": "例題 038", "q": "John must have been feeling sick, ( ____ ), he would have eaten the whole pizza.", "choices": ["however", "instead", "otherwise", "therefore"], "answer": "otherwise", "ja": "ジョンは体調が悪かったに違いありません。そうでなければ、ピザを丸ごと食べていただろう。", "ex": "otherwise は「そうでなければ」。仮定の意味を作ります。"}, {"type": "例題 039", "q": "I wish I ( ____ ) harder when I was a student.", "choices": ["studies", "studied", "has studied", "had studied"], "answer": "had studied", "ja": "学生だったときに、もっと一生懸命勉強していればよかったのに。", "ex": "過去の後悔は I wish + had + 過去分詞。"}, {"type": "例題 040", "q": "Why is he talking to me as if he ( ____ ) me? I've never seen him before.", "choices": ["know", "knew", "doesn't know", "didn't know"], "answer": "knew", "ja": "なぜ彼は私を知っているかのように話しかけてくるのですか。私は彼に一度も会ったことがありません。", "ex": "現在の事実と違う仮定なので as if + 過去形。"}, {"type": "例題 041", "q": "Stop playing that video game. It is time you ( ____ ) to bed.", "choices": ["will go", "go", "goes", "went"], "answer": "went", "ja": "そのビデオゲームをやめなさい。もう寝る時間です。", "ex": "It is time + 主語 + 過去形 で「もう～する時間だ」。"}, {"type": "問題 1", "q": "If I ( ____ ) you, I'd accept his offer.", "choices": ["be", "are", "were", "am"], "answer": "were", "ja": "もし私があなたなら、彼の申し出を受け入れるでしょう。", "ex": "仮定法では If I were you が定番です。"}, {"type": "問題 2", "q": "If he had time, he ( ____ ) with you.", "choices": ["go", "goes", "could go", "had gone"], "answer": "could go", "ja": "もし彼に時間があれば、あなたと一緒に行けるのに。", "ex": "現在の事実と違う仮定なので、主節は could / would + 動詞の原形。"}, {"type": "問題 3", "q": "If I had caught the express train, I ( ____ ) in time for the meeting yesterday.", "choices": ["would be", "would have been", "hope to be", "hope to have been"], "answer": "would have been", "ja": "もし急行列車に乗れていたら、昨日の会議に間に合っていただろう。", "ex": "過去の仮定なので would have + 過去分詞。"}, {"type": "問題 4", "q": "If I ( ____ ) taller, I could have played volleyball in my high school.", "choices": ["am", "was", "have been", "had been"], "answer": "had been", "ja": "もしもっと背が高かったら、高校でバレーボールができていただろう。", "ex": "高校時代の過去の仮定なので If + had been。"}, {"type": "問題 5", "q": "If he had sold his house at that time, he ( ____ ) rich now.", "choices": ["would be", "wouldn't be", "would have been", "wouldn't have been"], "answer": "would be", "ja": "もし彼がその時家を売っていたら、今ごろ裕福だろう。", "ex": "過去の仮定が現在に影響している形なので would be rich now。"}, {"type": "問題 6", "q": "If war ( ____ ) break out in that country, what would you do?", "choices": ["will", "were to", "would be", "will be"], "answer": "were to", "ja": "もしその国で戦争が起こるようなことがあれば、あなたはどうしますか。", "ex": "If S were to do で、可能性の低い未来の仮定を表します。"}, {"type": "問題 7", "q": "If my husband ( ____ ), please tell him I've gone out.", "choices": ["coming", "should come", "will come", "would have come"], "answer": "should come", "ja": "万一私の夫が来たら、私は外出したと伝えてください。", "ex": "If S should do で「万一～したら」。"}, {"type": "問題 8", "q": "If ( ____ ) air, all living things would die.", "choices": ["it weren't for", "it didn't have", "it had been", "it was for"], "answer": "it weren't for", "ja": "もし空気がなければ、すべての生き物は死んでしまうだろう。", "ex": "If it weren't for ～ で「もし～がなければ」。"}, {"type": "問題 9", "q": "Choose the correct sentence.", "choices": ["If it had not been for Anna's help, we would have lost the game.", "If had it not been for Anna's help, we would have lost the game.", "If it not had been for Anna's help, we would have lost the game.", "If it had been not for Anna's help, we would have lost the game."], "answer": "If it had not been for Anna's help, we would have lost the game.", "ja": "もしアンナの助けがなかったら、私たちはその試合に負けていただろう。", "ex": "過去の仮定は If it had not been for ～。"}, {"type": "問題 10", "q": "( ____ ) their cooperation, Ethan could not have succeeded.", "choices": ["Unless", "In spite of", "Although", "Without"], "answer": "Without", "ja": "彼らの協力がなかったら、イーサンは成功できなかっただろう。", "ex": "Without ～ は「もし～がなければ」。"}, {"type": "問題 11", "q": "( ____ ) Samantha's great effort, we could not have finished this project.", "choices": ["Unless", "If not", "But for", "With"], "answer": "But for", "ja": "サマンサの大きな努力がなかったら、私たちはこのプロジェクトを終えられなかっただろう。", "ex": "But for ～ は「もし～がなければ」。"}, {"type": "問題 12", "q": "( ____ ) rich, I would buy a new house for my family.", "choices": ["I am", "Am I", "I was", "Were I"], "answer": "Were I", "ja": "もし私がお金持ちなら、家族のために新しい家を買うだろう。", "ex": "If I were rich の If を省略すると Were I rich。"}, {"type": "問題 13", "q": "( ____ ) Mathew had more time, he would have done better.", "choices": ["Even if", "Unless", "Had", "If"], "answer": "Had", "ja": "もしマシューにもっと時間があったなら、彼はもっとうまくやっていただろう。", "ex": "If Mathew had had more time の If を省略した倒置です。Had Mathew had ...。"}, {"type": "問題 14", "q": "( ____ ) it rain, the game would be cancelled.", "choices": ["If", "Should", "Unless", "Would"], "answer": "Should", "ja": "万一雨が降れば、その試合は中止になるだろう。", "ex": "If it should rain の If を省略すると Should it rain。"}, {"type": "問題 15", "q": "She calls her parents every day from London. ( ____ ), they would worry about her.", "choices": ["While", "However", "Otherwise", "Therefore"], "answer": "Otherwise", "ja": "彼女はロンドンから毎日両親に電話をします。そうでなければ、両親は彼女のことを心配するでしょう。", "ex": "otherwise は「そうでなければ」。"}, {"type": "問題 16", "q": "I wish I ( ____ ) how to explain the problem in English.", "choices": ["know", "would know", "will know", "knew"], "answer": "knew", "ja": "その問題を英語でどう説明すればよいか分かればいいのに。", "ex": "現在の願望は I wish + 過去形。"}, {"type": "問題 17", "q": "I am sorry I missed the train. = I wish I ( ____ ) in time for the train.", "choices": ["am", "were", "had been", "to be"], "answer": "had been", "ja": "電車に間に合わなかったのが残念です。電車に間に合っていたらよかったのに。", "ex": "過去の後悔なので I wish + had + 過去分詞。"}, {"type": "問題 18", "q": "My closest friend Sally always talks to me as if we ( ____ ) sisters.", "choices": ["be", "have", "were", "get"], "answer": "were", "ja": "親友のサリーは、まるで私たちが姉妹であるかのように私に話します。", "ex": "現在の事実と違う仮定なので as if + 過去形 were。"}, {"type": "問題 19", "q": "The girl talks about the king as if she ( ____ ) him.", "choices": ["meet", "meeting", "have met", "had met"], "answer": "had met", "ja": "その女の子は、まるでその王様に会ったことがあるかのように話します。", "ex": "実際には会っていない過去のことを仮定しているので had met。"}, {"type": "問題 20", "q": "Hurry up! It's time we ( ____ ).", "choices": ["have left", "left", "will leave", "are leaving"], "answer": "left", "ja": "急いで！もう私たちが出発する時間です。", "ex": "It is time + 主語 + 過去形。"}, {"type": "問題 21", "q": "( ____ ) we had left ten minutes earlier!", "choices": ["Hope", "Unless", "If only", "I wonder"], "answer": "If only", "ja": "10分早く出発してさえいればなあ。", "ex": "If only + 仮定法で「～でさえあればなあ」。"}, {"type": "問題 22", "q": "“I'll repair your bike tomorrow, OK?” “( ____ )”", "choices": ["I'd rather you did it today.", "I'd prefer did it now.", "I'd rather did it today.", "I'd prefer doing it now."], "answer": "I'd rather you did it today.", "ja": "「明日あなたの自転車を修理するよ、いい？」 「できれば今日やってほしいです。」", "ex": "I'd rather + 主語 + 過去形 で「むしろ人に～してほしい」。"}, {"type": "Writing 1", "q": "Choose the correct sentence.", "choices": ["If I had had enough money, I would have bought a new car.", "If I had enough money, I would bought have a new car.", "If I had had enough money, I would bought have a new car.", "If I had had enough money, I would have buy a new car."], "answer": "If I had had enough money, I would have bought a new car.", "ja": "もし十分なお金があったなら、私は新しい車を買っていただろう。", "ex": "過去の仮定なので If + had + 過去分詞, would have + 過去分詞。"}, {"type": "Writing 2", "q": "Choose the correct sentence.", "choices": ["If he had been promoted at that time, he would still be working for the same company.", "If promoted he had been at that time, he would still be working for the same company.", "If he had promoted been at that time, he would still be working for the same company.", "If he had been promote at that time, he would still be working for the same company."], "answer": "If he had been promoted at that time, he would still be working for the same company.", "ja": "もし彼がその時昇進していたら、今でも同じ会社で働いていただろう。", "ex": "had been promoted は過去完了の受動態。"}, {"type": "Writing 3", "q": "Choose the correct sentence.", "choices": ["I wish I had more time and money.", "I more wish I time and had money.", "I wish I more time and had money.", "I wish I had time more and money."], "answer": "I wish I had more time and money.", "ja": "もっと時間とお金があればいいのに。", "ex": "I wish + 主語 + 過去形。more time and money の語順です。"}];
+let order = questions.map((_,i)=>i);
+let pos = 0;
+let answered = new Map();
+let wrongSet = new Set();
+
+const $ = id => document.getElementById(id);
+function currentIndex(){ return order[pos]; }
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+}
+function updateScore(){
+  let correct = 0;
+  answered.forEach((choice, idx)=>{ if(choice === questions[idx].answer) correct++; });
+  $('score').textContent = `正解 ${correct} / ${answered.size}`;
+}
+function render(){
+  if(order.length === 0){
+    $('counter').textContent = '0 / 0';
+    $('progress').style.width = '0%';
+    $('type').textContent = '復習する問題はありません';
+    $('q').textContent = '全問正解です！';
+    $('choices').innerHTML = '';
+    $('result').className = 'result ok';
+    $('result').innerHTML = 'すばらしいです。もう一度やるときは「最初から」を押してください。';
+    buildList(); updateScore(); return;
+  }
+  const idx = currentIndex();
+  const item = questions[idx];
+  $('counter').textContent = `${pos+1} / ${order.length}`;
+  $('progress').style.width = `${((pos+1)/order.length)*100}%`;
+  $('type').textContent = item.type;
+  $('q').textContent = item.q;
+  $('choices').innerHTML = '';
+  const selected = answered.get(idx);
+
+  item.choices.forEach((choice, i)=>{
+    const btn = document.createElement('button');
+    btn.className = 'choice';
+    btn.innerHTML = `${i+1}. ${escapeHtml(choice)}`;
+    btn.onclick = () => choose(choice);
+    if(selected){
+      btn.disabled = true;
+      if(choice === item.answer) btn.classList.add('correct');
+      if(choice === selected && choice !== item.answer) btn.classList.add('wrong');
+    }
+    $('choices').appendChild(btn);
+  });
+
+  if(selected) showResult(selected === item.answer);
+  else {
+    $('result').style.display = 'none';
+    $('result').className = 'result';
+    $('result').innerHTML = '';
+  }
+  buildList(); updateScore();
+}
+function choose(choice){
+  const idx = currentIndex();
+  answered.set(idx, choice);
+  if(choice === questions[idx].answer) wrongSet.delete(idx);
+  else wrongSet.add(idx);
+  render();
+}
+function showResult(isCorrect){
+  const item = questions[currentIndex()];
+  $('result').style.display = 'block';
+  $('result').className = 'result ' + (isCorrect ? 'ok' : 'ng');
+  $('result').innerHTML = `
+    <b>${isCorrect ? '正解！' : 'もう一度確認！'}</b><br>
+    正しい答え：<b>${escapeHtml(item.answer)}</b><br>
+    <div class="ja">${escapeHtml(item.ja)}</div>
+    <div>${escapeHtml(item.ex)}</div>
+  `;
+}
+function buildList(){
+  const list = $('list'); list.innerHTML = '';
+  order.forEach((idx,k)=>{
+    const selected = answered.get(idx);
+    const div = document.createElement('div');
+    div.className = 'item' + (k===pos ? ' active' : '') + (selected ? (selected===questions[idx].answer ? ' ok' : ' ng') : '');
+    div.innerHTML = `${questions[idx].type}：${escapeHtml(questions[idx].q)}`;
+    div.onclick = () => { pos = k; render(); window.scrollTo({top:0, behavior:'smooth'}); };
+    list.appendChild(div);
+  });
+}
+function shuffleOrder(){
+  for(let i=order.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [order[i],order[j]]=[order[j],order[i]]; }
+  pos = 0; render();
+}
+$('prevBtn').onclick = () => { if(order.length){ pos = (pos - 1 + order.length) % order.length; render(); } };
+$('nextBtn').onclick = () => { if(order.length){ pos = (pos + 1) % order.length; render(); } };
+$('shuffleBtn').onclick = () => { order = questions.map((_,i)=>i); shuffleOrder(); };
+$('normalBtn').onclick = () => { order = questions.map((_,i)=>i); pos=0; render(); };
+$('resetBtn').onclick = () => { answered.clear(); wrongSet.clear(); order=questions.map((_,i)=>i); pos=0; render(); };
+$('retryBtn').onclick = () => { answered.delete(currentIndex()); render(); };
+$('showAnswerBtn').onclick = () => { answered.set(currentIndex(), questions[currentIndex()].answer); wrongSet.delete(currentIndex()); render(); };
+$('reviewBtn').onclick = () => { order = [...wrongSet]; pos = 0; render(); };
+document.addEventListener('keydown', e=>{
+  if(e.key === 'ArrowRight') $('nextBtn').click();
+  if(e.key === 'ArrowLeft') $('prevBtn').click();
+  if(['1','2','3','4'].includes(e.key) && order.length){
+    const item = questions[currentIndex()];
+    const ch = item.choices[Number(e.key)-1];
+    if(ch && !answered.has(currentIndex())) choose(ch);
+  }
+});
+render();
+</script>
+</body>
+</html>

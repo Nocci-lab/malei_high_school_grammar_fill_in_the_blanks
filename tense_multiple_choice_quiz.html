@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>時制 4択問題ゲーム</title>
+  <style>
+    :root{
+      --bg:#f6f8fb; --card:#fff; --ink:#172033; --muted:#687386;
+      --main:#2f6fed; --soft:#eaf1ff; --ok:#10a36f; --ng:#e5484d;
+      --line:#dce3ef; --yellow:#fff8e7;
+    }
+    *{box-sizing:border-box}
+    body{margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Hiragino Sans","Yu Gothic",sans-serif; background:var(--bg); color:var(--ink);}
+    header{text-align:center; padding:24px 14px 12px;}
+    h1{margin:0 0 8px; font-size:clamp(26px,4.8vw,42px);}
+    .sub{color:var(--muted); font-size:15px; line-height:1.6}
+    main{max-width:980px; margin:0 auto; padding:0 14px 30px;}
+    .panel{background:var(--card); border:1px solid var(--line); border-radius:24px; box-shadow:0 12px 28px rgba(26,42,68,.08); padding:18px;}
+    .toprow{display:flex; gap:10px; align-items:center; justify-content:space-between; flex-wrap:wrap; margin-bottom:14px;}
+    .badge{background:var(--soft); color:var(--main); font-weight:900; padding:8px 12px; border-radius:999px;}
+    .score{font-weight:900; color:var(--muted);}
+    .progressWrap{height:12px; background:#edf1f7; border-radius:999px; overflow:hidden; flex:1; min-width:180px;}
+    .progress{height:100%; width:0%; background:var(--main); transition:.25s;}
+    .questionBox{border:2px solid var(--line); border-radius:20px; padding:18px; background:linear-gradient(180deg,#fff,#fbfdff);}
+    .type{font-size:14px; font-weight:900; color:var(--main); margin-bottom:10px;}
+    .q{font-family:Georgia,"Times New Roman",serif; font-size:clamp(24px,3.8vw,42px); line-height:1.35; font-weight:800; margin-bottom:16px;}
+    .choices{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
+    .choice{border:2px solid var(--line); background:white; border-radius:16px; padding:15px; font-size:clamp(17px,2.5vw,24px); font-weight:800; text-align:left; cursor:pointer; transition:.15s;}
+    .choice:hover{border-color:var(--main); background:var(--soft);}
+    .choice.correct{border-color:var(--ok); background:#e9fbf4; color:#087a50;}
+    .choice.wrong{border-color:var(--ng); background:#fff0f0; color:#b42329;}
+    .choice:disabled{cursor:default; opacity:1;}
+    .result{margin-top:14px; display:none; border-radius:16px; padding:14px; line-height:1.65;}
+    .result.ok{display:block; background:#e9fbf4; border:1px solid #a8ecd2;}
+    .result.ng{display:block; background:#fff0f0; border:1px solid #ffc9c9;}
+    .ja{margin-top:10px; background:var(--yellow); border:1px solid #f1dfac; border-radius:12px; padding:10px;}
+    .buttons{display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-top:14px;}
+    button{font-size:16px; border:none; border-radius:14px; padding:13px 12px; font-weight:900; cursor:pointer; background:#eef3fb; color:var(--ink);}
+    button.primary{background:var(--main); color:white;}
+    button.green{background:var(--ok); color:white;}
+    button.red{background:var(--ng); color:white;}
+    button:active{transform:translateY(1px)}
+    .list{margin-top:18px; display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:8px;}
+    .item{border:1px solid var(--line); border-radius:12px; background:white; padding:10px; cursor:pointer; font-size:14px; line-height:1.35;}
+    .item.active{border-color:var(--main); background:var(--soft);}
+    .item.ok{border-color:#a8ecd2; background:#f0fff8;}
+    .item.ng{border-color:#ffc9c9; background:#fff7f7;}
+    .small{font-size:13px; color:var(--muted); margin-top:10px; line-height:1.6;}
+    @media(max-width:680px){
+      .choices{grid-template-columns:1fr;}
+      .buttons{grid-template-columns:repeat(2,1fr);}
+    }
+  </style>
+</head>
+<body>
+<header>
+  <h1>時制 4択問題ゲーム</h1>
+  <div class="sub">何度も解き直しOK・間違えた問題だけ復習できます</div>
+</header>
+<main>
+  <section class="panel">
+    <div class="toprow">
+      <div class="badge" id="counter">1 / 38</div>
+      <div class="progressWrap"><div class="progress" id="progress"></div></div>
+      <div class="score" id="score">正解 0 / 0</div>
+    </div>
+
+    <div class="questionBox">
+      <div class="type" id="type"></div>
+      <div class="q" id="q"></div>
+      <div class="choices" id="choices"></div>
+      <div class="result" id="result"></div>
+    </div>
+
+    <div class="buttons">
+      <button id="prevBtn">← 前へ</button>
+      <button class="primary" id="nextBtn">次へ →</button>
+      <button class="green" id="reviewBtn">間違い復習</button>
+      <button class="red" id="resetBtn">最初から</button>
+    </div>
+    <div class="buttons">
+      <button id="shuffleBtn">ランダム</button>
+      <button id="normalBtn">番号順</button>
+      <button id="showAnswerBtn">答えを見る</button>
+      <button id="retryBtn">この問題を解き直す</button>
+    </div>
+    <div class="small">答えを選ぶと、自動で正誤と解説が出ます。リストから好きな問題に移動できます。</div>
+  </section>
+  <div class="list" id="list"></div>
+</main>
+
+<script>
+const questions = [{"type": "例題 001", "q": "We sometimes ( ____ ) at Ken's Diner.", "choices": ["are eating", "eating", "eats", "eat"], "answer": "eat", "ja": "私たちは時々ケンの食堂で食事をします。", "ex": "sometimes があるので、現在の習慣を表す現在形 eat。"}, {"type": "例題 002", "q": "Mike ( ____ ) a video game in his room now.", "choices": ["play", "plays", "is playing", "was playing"], "answer": "is playing", "ja": "マイクは今、自分の部屋でテレビゲームをしています。", "ex": "now があるので、現在進行形 is playing。"}, {"type": "例題 003", "q": "These islands ( ____ ) Nagasaki Prefecture.", "choices": ["belong", "belong to", "are belonging", "are belonging to"], "answer": "belong to", "ja": "これらの島々は長崎県に属しています。", "ex": "belong to ～ で「～に属する」。状態動詞なので普通は進行形にしません。"}, {"type": "例題 004", "q": "My parents weren’t in the living room when I ( ____ ) home.", "choices": ["come", "came", "has come", "had come"], "answer": "came", "ja": "私が帰宅したとき、両親は居間にいませんでした。", "ex": "主節が過去なので、when の中も過去形 came。"}, {"type": "例題 005", "q": "By the end of this year, our new media center ( ____ ) in Shinagawa.", "choices": ["opened", "open", "has opened", "will open"], "answer": "will open", "ja": "今年の終わりまでに、私たちの新しいメディアセンターが品川に開く予定です。", "ex": "this year の終わりまでの未来の予定なので will open。"}, {"type": "例題 006", "q": "The president ( ____ ) a speech at the conference tomorrow.", "choices": ["is making", "has made", "was making", "has been making"], "answer": "is making", "ja": "大統領は明日、その会議でスピーチをする予定です。", "ex": "tomorrow の予定を現在進行形で表しています。"}, {"type": "例題 007", "q": "“May I speak to your father, please?” “I’m sorry but he ( ____ ) his office.”", "choices": ["goes to", "has gone to", "has been to", "will go to"], "answer": "has gone to", "ja": "「お父さんと話せますか。」「すみません、彼は事務所へ行ってしまいました。」", "ex": "has gone to ～ は「～へ行ってしまって、今ここにいない」。"}, {"type": "例題 008", "q": "Kate ( ____ ) Japanese food several times before she came to Japan.", "choices": ["had eaten", "has eaten", "was eating", "eats"], "answer": "had eaten", "ja": "ケイトは日本に来る前に、日本食を何度か食べたことがありました。", "ex": "came より前の経験なので過去完了 had eaten。"}, {"type": "例題 009", "q": "William ( ____ ) the violin since he was six years old.", "choices": ["has been played", "has been playing", "is playing", "plays"], "answer": "has been playing", "ja": "ウィリアムは6歳の時からずっとバイオリンを弾いています。", "ex": "since があり、「ずっとしている」なので現在完了進行形。"}, {"type": "例題 010", "q": "A friend of mine said that his father ( ____ ) a small supermarket in this town.", "choices": ["own", "is owning", "owned", "was owning"], "answer": "owned", "ja": "私の友人は、彼の父親がこの町で小さなスーパーを所有していると言いました。", "ex": "said に合わせて時制の一致。own は状態動詞なので owned。"}, {"type": "例題 011", "q": "I’ll lend you the CD when ( ____ ).", "choices": ["we’ll meet", "we meet", "we’ll be meeting", "we met"], "answer": "we meet", "ja": "私たちが会うときに、そのCDをあなたに貸します。", "ex": "時を表す when の中では、未来のことでも現在形。"}, {"type": "問題 1", "q": "I ( ____ ) to eat sushi these days.", "choices": ["loves", "loving", "love", "was loving"], "answer": "love", "ja": "私は最近、寿司を食べるのが大好きです。", "ex": "主語 I なので現在形 love。"}, {"type": "問題 2", "q": "Keiko is in the kitchen. She’s ( ____ ) a pot of tea.", "choices": ["is making", "making", "makes", "make"], "answer": "making", "ja": "ケイコは台所にいます。彼女はお茶を入れています。", "ex": "She’s = She is なので、後ろは making。"}, {"type": "問題 3", "q": "Lisa called me while I ( ____ ) dinner last night.", "choices": ["ate", "was eating", "would eat", "had eaten"], "answer": "was eating", "ja": "昨夜、私が夕食を食べている間に、リサが私に電話をしました。", "ex": "while「～している間」なので過去進行形 was eating。"}, {"type": "問題 4", "q": "Fruit in general ( ____ ) sweet.", "choices": ["is tasted", "is tasting", "tastes", "was tasting"], "answer": "tastes", "ja": "果物は一般的に甘い味がします。", "ex": "一般的な事実なので現在形。taste はここでは自動詞で tastes。"}, {"type": "問題 5", "q": "I was very tired yesterday because I ( ____ ) a long meeting.", "choices": ["am attending", "attending", "attended", "was attended"], "answer": "attended", "ja": "昨日、私は長い会議に出席したので、とても疲れていました。", "ex": "yesterday の過去の出来事なので attended。"}, {"type": "問題 6", "q": "Be careful, or you ( ____ ) on the wet floor.", "choices": ["slip", "will slip", "are going to slip", "are slipping"], "answer": "will slip", "ja": "気をつけなさい。さもないと、ぬれた床で滑りますよ。", "ex": "命令文, or ... は「～しなさい、さもないと…するだろう」。"}, {"type": "問題 7", "q": "I ( ____ ) play in a big soccer match next weekend.", "choices": ["am going to", "am going", "am will", "will to"], "answer": "am going to", "ja": "私は来週末、大きなサッカーの試合に出る予定です。", "ex": "be going to + 動詞の原形。"}, {"type": "問題 8", "q": "Choose the correct sentence.", "choices": ["I was about to call you.", "I was call about to you.", "I about was to call you.", "I was to about call you."], "answer": "I was about to call you.", "ja": "私はちょうどあなたに電話しようとしていました。", "ex": "be about to 動詞の原形 で「まさに～しようとしている」。"}, {"type": "問題 9", "q": "They ( ____ ) for Paris tomorrow.", "choices": ["will leaving", "are leave", "left", "are leaving"], "answer": "are leaving", "ja": "彼らは明日パリへ出発します。", "ex": "近い未来の予定を現在進行形で表します。"}, {"type": "問題 10", "q": "Choose the correct sentence.", "choices": ["My sister will be living a comfortable life this time next year.", "My sister will living be a comfortable life this time next year.", "My sister will be a comfortable life living this time next year.", "My sister will be living this a comfortable life time next year."], "answer": "My sister will be living a comfortable life this time next year.", "ja": "来年の今ごろ、私の妹は快適な生活を送っているでしょう。", "ex": "未来進行形 will be living。this time next year は「来年の今ごろ」。"}, {"type": "問題 11", "q": "Ryo bought a new suit but he ( ____ ) it yet.", "choices": ["didn’t wear", "hasn’t wore", "didn’t wore", "hasn’t worn"], "answer": "hasn’t worn", "ja": "リョウは新しいスーツを買いましたが、まだそれを着ていません。", "ex": "yet があるので現在完了の否定 has not + 過去分詞。wear-wore-worn。"}, {"type": "問題 12", "q": "Karl ( ____ ) in London for five years when he was a child.", "choices": ["lives", "has lived", "lived", "has been living"], "answer": "lived", "ja": "カールは子どものころ、5年間ロンドンに住んでいました。", "ex": "when he was a child という過去の話なので lived。"}, {"type": "問題 13", "q": "My best friend and I ( ____ ) each other since we were five.", "choices": ["have known", "know", "knew", "knowing"], "answer": "have known", "ja": "私の親友と私は、5歳のころからお互いを知っています。", "ex": "since があるので現在完了 have known。know は状態動詞なので普通は進行形にしません。"}, {"type": "問題 14", "q": "My friend from Africa ( ____ ) snow until he came to Japan.", "choices": ["has not seen", "was never seeing", "had never seen", "will have seen"], "answer": "had never seen", "ja": "アフリカ出身の友人は、日本に来るまで雪を一度も見たことがありませんでした。", "ex": "came to Japan より前の経験なので過去完了 had never seen。"}, {"type": "問題 15", "q": "When Mary was introduced to Mrs. Smith, she realized she ( ____ ) her before.", "choices": ["is meeting", "was meeting", "will meet", "had met"], "answer": "had met", "ja": "メアリーがスミス夫人に紹介されたとき、彼女は以前にその人に会ったことがあると気づきました。", "ex": "realized より前に会っていたので過去完了 had met。"}, {"type": "問題 16", "q": "At the end of next month, we ( ____ ) here for three years.", "choices": ["have lived", "live", "will have lived", "will live"], "answer": "will have lived", "ja": "来月の終わりで、私たちはここに3年間住んでいることになります。", "ex": "未来のある時点までの継続なので未来完了 will have lived。"}, {"type": "問題 17", "q": "I really must go and see the dentist. One of my teeth ( ____ ) for weeks.", "choices": ["ached", "aches", "has been aching", "is aching"], "answer": "has been aching", "ja": "本当に歯医者に行かなければなりません。私の歯の1本が何週間も痛んでいます。", "ex": "for weeks で今まで続いているので現在完了進行形。"}, {"type": "問題 18", "q": "I ( ____ ) my homework for an hour when my mother came home.", "choices": ["am doing", "was doing", "have been doing", "had been doing"], "answer": "had been doing", "ja": "母が帰宅したとき、私は1時間ずっと宿題をしていました。", "ex": "母が帰宅した過去の時点まで続いていたので過去完了進行形。"}, {"type": "問題 19", "q": "She ( ____ ) in the accounting department for 10 years by the end of next month.", "choices": ["has worked", "has been working", "will have been working", "is working"], "answer": "will have been working", "ja": "来月の終わりで、彼女は経理部で10年間働き続けていることになります。", "ex": "未来の時点までの継続なので未来完了進行形。"}, {"type": "問題 20", "q": "When I woke up this morning, I decided I ( ____ ) to get in shape.", "choices": ["want", "wanted", "will want", "had wanted"], "answer": "wanted", "ja": "今朝目が覚めたとき、私は体調を整えたいと思いました。", "ex": "decided が過去なので、後ろも wanted にする時制の一致。"}, {"type": "問題 21", "q": "Yesterday in science class, I learned that water ( ____ ) at 100℃.", "choices": ["was boiling", "boiling", "boils", "boil"], "answer": "boils", "ja": "昨日の理科の授業で、水は100℃で沸騰すると学びました。", "ex": "科学的な事実は現在形で表します。"}, {"type": "問題 22", "q": "I will ask him about it as soon as he ( ____ ) back.", "choices": ["come", "comes", "will come", "would have come"], "answer": "comes", "ja": "彼が戻ってきたらすぐに、そのことについて彼に尋ねます。", "ex": "時を表す as soon as の中では、未来のことでも現在形。"}, {"type": "問題 23", "q": "I’ll be back before it ( ____ ).", "choices": ["rain", "rains", "will rain", "would rain"], "answer": "rains", "ja": "雨が降る前に戻ります。", "ex": "時を表す before の中では、未来のことでも現在形。"}, {"type": "問題 24", "q": "If it ( ____ ) on Thursday, we will not go to the beach.", "choices": ["rains", "would rain", "rained", "has been rained"], "answer": "rains", "ja": "木曜日に雨が降れば、私たちはビーチへ行きません。", "ex": "条件を表す if の中では、未来のことでも現在形。"}, {"type": "問題 25", "q": "I don’t know if our teacher ( ____ ) back next week.", "choices": ["came", "come", "comes", "will come"], "answer": "will come", "ja": "私たちの先生が来週戻ってくるかどうか、私は知りません。", "ex": "この if は「もし」ではなく「～かどうか」。名詞節なので未来は will come。"}, {"type": "問題 26", "q": "Turn off the lights when you ( ____ ) the room.", "choices": ["leave", "left", "will leave", "leaving"], "answer": "leave", "ja": "部屋を出るときは、電気を消しなさい。", "ex": "時を表す when の中では、未来のことでも現在形。"}, {"type": "問題 27", "q": "I wonder when he ( ____ ) next.", "choices": ["come", "coming", "had come", "will come"], "answer": "will come", "ja": "彼が次にいつ来るのだろうと思います。", "ex": "この when は名詞節の中なので、未来は will come。"}];
+let order = questions.map((_,i)=>i);
+let pos = 0;
+let answered = new Map(); // index -> choice
+let wrongSet = new Set();
+let reviewMode = false;
+
+const $ = id => document.getElementById(id);
+
+function currentIndex(){ return order[pos]; }
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+}
+function updateScore(){
+  let correct = 0;
+  answered.forEach((choice, idx)=>{ if(choice === questions[idx].answer) correct++; });
+  $('score').textContent = `正解 ${correct} / ${answered.size}`;
+}
+function render(){
+  if(order.length === 0){
+    $('counter').textContent = '0 / 0';
+    $('progress').style.width = '0%';
+    $('type').textContent = '復習する問題はありません';
+    $('q').textContent = '全問正解です！';
+    $('choices').innerHTML = '';
+    $('result').className = 'result ok';
+    $('result').innerHTML = 'すばらしいです。もう一度やるときは「最初から」を押してください。';
+    buildList();
+    updateScore();
+    return;
+  }
+  const idx = currentIndex();
+  const item = questions[idx];
+  $('counter').textContent = `${pos+1} / ${order.length}`;
+  $('progress').style.width = `${((pos+1)/order.length)*100}%`;
+  $('type').textContent = item.type;
+  $('q').textContent = item.q;
+  $('choices').innerHTML = '';
+  const selected = answered.get(idx);
+
+  item.choices.forEach((choice, i)=>{
+    const btn = document.createElement('button');
+    btn.className = 'choice';
+    btn.innerHTML = `${i+1}. ${escapeHtml(choice)}`;
+    btn.onclick = () => choose(choice);
+    if(selected){
+      btn.disabled = true;
+      if(choice === item.answer) btn.classList.add('correct');
+      if(choice === selected && choice !== item.answer) btn.classList.add('wrong');
+    }
+    $('choices').appendChild(btn);
+  });
+
+  if(selected){
+    showResult(selected === item.answer);
+  }else{
+    $('result').style.display = 'none';
+    $('result').className = 'result';
+    $('result').innerHTML = '';
+  }
+  buildList();
+  updateScore();
+}
+function choose(choice){
+  const idx = currentIndex();
+  answered.set(idx, choice);
+  if(choice === questions[idx].answer) wrongSet.delete(idx);
+  else wrongSet.add(idx);
+  render();
+}
+function showResult(isCorrect){
+  const item = questions[currentIndex()];
+  const selected = answered.get(currentIndex());
+  $('result').style.display = 'block';
+  $('result').className = 'result ' + (isCorrect ? 'ok' : 'ng');
+  $('result').innerHTML = `
+    <b>${isCorrect ? '正解！' : 'もう一度確認！'}</b><br>
+    正しい答え：<b>${escapeHtml(item.answer)}</b><br>
+    <div class="ja">${escapeHtml(item.ja)}</div>
+    <div>${escapeHtml(item.ex)}</div>
+  `;
+}
+function buildList(){
+  const list = $('list');
+  list.innerHTML = '';
+  order.forEach((idx,k)=>{
+    const div = document.createElement('div');
+    const selected = answered.get(idx);
+    div.className = 'item' + (k===pos ? ' active' : '') + (selected ? (selected===questions[idx].answer ? ' ok' : ' ng') : '');
+    div.innerHTML = `${questions[idx].type}：${escapeHtml(questions[idx].q)}`;
+    div.onclick = () => { pos = k; render(); window.scrollTo({top:0, behavior:'smooth'}); };
+    list.appendChild(div);
+  });
+}
+function shuffleOrder(){
+  for(let i=order.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [order[i],order[j]]=[order[j],order[i]]; }
+  pos = 0;
+  render();
+}
+$('prevBtn').onclick = () => { if(order.length){ pos = (pos - 1 + order.length) % order.length; render(); } };
+$('nextBtn').onclick = () => { if(order.length){ pos = (pos + 1) % order.length; render(); } };
+$('shuffleBtn').onclick = () => { reviewMode=false; order = questions.map((_,i)=>i); shuffleOrder(); };
+$('normalBtn').onclick = () => { reviewMode=false; order = questions.map((_,i)=>i); pos=0; render(); };
+$('resetBtn').onclick = () => { answered.clear(); wrongSet.clear(); reviewMode=false; order=questions.map((_,i)=>i); pos=0; render(); };
+$('retryBtn').onclick = () => { answered.delete(currentIndex()); render(); };
+$('showAnswerBtn').onclick = () => { answered.set(currentIndex(), questions[currentIndex()].answer); wrongSet.delete(currentIndex()); render(); };
+$('reviewBtn').onclick = () => {
+  const wrongs = [...wrongSet];
+  reviewMode = true;
+  order = wrongs;
+  pos = 0;
+  render();
+};
+document.addEventListener('keydown', e=>{
+  if(e.key === 'ArrowRight') $('nextBtn').click();
+  if(e.key === 'ArrowLeft') $('prevBtn').click();
+  if(['1','2','3','4'].includes(e.key) && order.length){
+    const item = questions[currentIndex()];
+    const ch = item.choices[Number(e.key)-1];
+    if(ch && !answered.has(currentIndex())) choose(ch);
+  }
+});
+render();
+</script>
+</body>
+</html>
