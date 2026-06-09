@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>高校英文法 4択問題ゲーム 目次</title>
+  <style>
+    :root {
+      --bg: #f6f8fb;
+      --card: #ffffff;
+      --ink: #172033;
+      --muted: #687386;
+      --main: #2f6fed;
+      --soft: #eaf1ff;
+      --line: #dce3ef;
+      --shadow: rgba(26,42,68,.10);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Sans", "Yu Gothic", sans-serif;
+      background:
+        radial-gradient(circle at top left, #eaf1ff 0, transparent 34%),
+        var(--bg);
+      color: var(--ink);
+      min-height: 100vh;
+    }
+    header {
+      text-align: center;
+      padding: 34px 16px 18px;
+    }
+    h1 {
+      margin: 0 0 10px;
+      font-size: clamp(28px, 5vw, 46px);
+      letter-spacing: .03em;
+    }
+    .sub {
+      color: var(--muted);
+      font-size: 16px;
+      line-height: 1.7;
+    }
+    main {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 14px 16px 42px;
+    }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 26px;
+      box-shadow: 0 14px 34px var(--shadow);
+      padding: 22px;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+    }
+    a.lesson {
+      text-decoration: none;
+      color: var(--ink);
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      border: 2px solid var(--line);
+      border-radius: 22px;
+      padding: 22px 18px;
+      background: linear-gradient(180deg, #fff, #fbfdff);
+      transition: .18s ease;
+      min-height: 116px;
+    }
+    a.lesson:hover {
+      transform: translateY(-3px);
+      border-color: var(--main);
+      box-shadow: 0 10px 22px rgba(47,111,237,.14);
+      background: var(--soft);
+    }
+    .num {
+      width: 54px;
+      height: 54px;
+      border-radius: 50%;
+      background: var(--main);
+      color: white;
+      display: grid;
+      place-items: center;
+      font-weight: 900;
+      font-size: 24px;
+      flex: 0 0 auto;
+    }
+    .title {
+      font-size: clamp(24px, 4vw, 34px);
+      font-weight: 900;
+      line-height: 1.2;
+    }
+    .en {
+      margin-top: 6px;
+      color: var(--muted);
+      font-size: 14px;
+      font-weight: 700;
+    }
+    .note {
+      margin-top: 18px;
+      color: var(--muted);
+      text-align: center;
+      font-size: 14px;
+      line-height: 1.7;
+    }
+    @media(max-width: 680px) {
+      .grid { grid-template-columns: 1fr; }
+      .card { padding: 16px; }
+      a.lesson { min-height: 96px; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>高校英文法 4択問題ゲーム</h1>
+    <div class="sub">何度も解き直して、文法の形を覚えよう</div>
+  </header>
+
+  <main>
+    <section class="card">
+      <div class="grid">
+        <a class="lesson" href="https://nocci-lab.github.io/malei_high_school_grammar_fill_in_the_blanks/tense_multiple_choice_quiz.html">
+          <div class="num">1</div>
+          <div>
+            <div class="title">時制</div>
+            <div class="en">Tense Multiple Choice Quiz</div>
+          </div>
+        </a>
+        <a class="lesson" href="https://nocci-lab.github.io/malei_high_school_grammar_fill_in_the_blanks/passive_voice_multiple_choice_quiz.html">
+          <div class="num">2</div>
+          <div>
+            <div class="title">受動態</div>
+            <div class="en">Passive Voice Multiple Choice Quiz</div>
+          </div>
+        </a>
+        <a class="lesson" href="https://nocci-lab.github.io/malei_high_school_grammar_fill_in_the_blanks/modal_auxiliary_multiple_choice_quiz.html">
+          <div class="num">3</div>
+          <div>
+            <div class="title">助動詞</div>
+            <div class="en">Modal Auxiliary Multiple Choice Quiz</div>
+          </div>
+        </a>
+        <a class="lesson" href="https://nocci-lab.github.io/malei_high_school_grammar_fill_in_the_blanks/subjunctive_multiple_choice_quiz.html">
+          <div class="num">4</div>
+          <div>
+            <div class="title">仮定法</div>
+            <div class="en">Subjunctive Multiple Choice Quiz</div>
+          </div>
+        </a>
+      </div>
+      <div class="note">
+        ボタンを押すと、それぞれの4択問題ゲームが開きます。
+      </div>
+    </section>
+  </main>
+</body>
+</html>
